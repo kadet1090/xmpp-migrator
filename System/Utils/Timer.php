@@ -101,13 +101,14 @@ class Timer
         $this->active = false;
     }
 
-    public function __destruct()
+    /*public function __destruct()
     {
         foreach (self::$_timers as $id => $timer) {
-            if($timer == $this)
+            if($timer == $this) {
                 unset(self::$_timers[$id]);
+            }
         }
-    }
+    }*/
 }
 
 ?>

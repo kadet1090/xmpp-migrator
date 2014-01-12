@@ -96,11 +96,12 @@ class RosterItem
 
     //</editor-fold>
 
-    public function __construct(Roster $roster, Jid $jid, $name = null)
+    public function __construct(Roster $roster, Jid $jid, $name = null, $groups = [])
     {
         $this->_roster = $roster;
         $this->_jid = $jid;
         $this->_name = $name == null ? (string)$jid : $name;
+        $this->_groups = $groups;
     }
 
     public function addGroup($group)

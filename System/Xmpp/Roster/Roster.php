@@ -23,6 +23,7 @@ class Roster implements \ArrayAccess, \IteratorAggregate
 
     public $onItemChange;
     public $onItem;
+    public $onComplete;
 
     public function __construct(XmppClient $client)
     {
@@ -33,6 +34,7 @@ class Roster implements \ArrayAccess, \IteratorAggregate
         $this->onItemChange->add([$this, '_onItemChange']);
 
         $this->onItem = new Event();
+        $this->onComplete = new Event;
     }
 
     /**
@@ -54,11 +56,13 @@ class Roster implements \ArrayAccess, \IteratorAggregate
                 }
                 break;
         }
+
+        $this->onComplete->run($this);
     }
 
     public function add(Jid $jid, $name = null, $groups = [])
     {
-        $item = new RosterItem($this, $jid, $name);
+        $item = new RosterItem($this, $jid, $name, $groups);
         $this->_client->write($this->itemXml($item));
     }
 
@@ -78,10 +82,8 @@ class Roster implements \ArrayAccess, \IteratorAggregate
         $xml->query[0]->addChild(new XmlBranch('item'))->addAttribute('jid', $item->jid->bare());
 
         if ($item->name != null) $xml->query[0]->item[0]->addAttribute('name', $item->name);
-        if (!empty($groups)) {
-            foreach ($groups as $group) {
-                $xml->query[0]->item[0]->addChild(new XmlBranch('group'))->setContent('group');
-            }
+        foreach ($item->groups as $group) {
+            $xml->query[0]->item[0]->addChild(new XmlBranch('group'))->setContent($group);
         }
 
         return $xml;
@@ -90,7 +92,7 @@ class Roster implements \ArrayAccess, \IteratorAggregate
     private function fromXml($item)
     {
         $contact = RosterItem::fromXml($this, $item);
-        $this->onItem($item);
+        $this->onItem->run($contact);
         foreach ($this->_contacts as $name => $group) {
             foreach ($group as $key => $rc) {
                 if ($rc->jid->bare() == $contact->jid->bare())
