@@ -1,6 +1,18 @@
 <?php
 define('DEBUG_MODE', 0);
 
+$mid = '';
+
+function info($type, $message) {
+    global $mid;
+
+    if(PHP_SAPI != 'cli') {
+        file_put_contents('logs/'.$mid, "<div class=\"alert alert-$type\">$message</div>\n", FILE_APPEND);
+    } else {
+        echo "[$type] $message";
+    }
+}
+
 include 'System/functions.php';
 require 'System/Utils/AutoLoader.php';
 
@@ -42,6 +54,49 @@ USAGE;
         $settings['status'] = $argv[$key + 1] == 'no' ? false : $argv[$key + 1];
     else
         $settings['status'] = 'Zmieniłem swoje JID na: %new. Dodaj je do swoich kontaktów, a stare usuń ;)';
+
+    if(in_array('-nr', $argv))
+        $settings['roster'] = false;
+    else
+        $settings['status'] = true;
+} else {
+    if(!preg_match('/([^@\/\"\'\s\&\:><]+)\@([a-z_\-\.]*[a-z]{2,3}):(.*)/', $_POST['from'], $matches)) info('danger', 'Podaj poprawne jid, z którego chcesz migrować.');
+    $settings['from'] = ['name' => $matches[1], 'server' => $matches[2], 'password' => $matches[3]];
+
+    if(!preg_match('/([^@\/\"\'\s\&\:><]+)\@([a-z_\-\.]*[a-z]{2,3}):(.*)/', $_POST['to']  , $matches)) info('danger', 'Podaj poprawne jid, na które chcesz migrować.');
+    $settings['to']   = ['name' => $matches[1], 'server' => $matches[2], 'password' => $matches[3]];
+
+    if(!empty($_POST['message']))
+        $settings['message'] = $_POST['message'] == 'no' ? false : $_POST['message'];
+    else
+        $settings['message'] = 'Cześć! Zmieniłem swoje JID na: %new. Dodaj je do swoich kontaktów, a stare usuń ;)';
+
+    if(!empty($_POST['status']))
+        $settings['status'] = $_POST['status'] == 'no' ? false : $_POST['status'];
+    else
+        $settings['status'] = 'Zmieniłem swoje JID na: %new. Dodaj je do swoich kontaktów, a stare usuń ;)';
+
+    if(!empty($_POST['roster']))
+        $settings['roster'] = $_POST['roster'] == 'no' ? false : true;
+    else
+        $settings['roster'] = true;
+
+    $mid = md5($_POST['from'].':'.$_POST['to'].':'.time());
+    touch('logs/'.$mid);
+    echo $mid;
+
+    // get the size of the output
+    $size = ob_get_length();
+
+    // send headers to tell the browser to close the connection
+    header("Content-Length: $size");
+    header('Connection: close');
+    sleep(1);
+
+    // flush all output
+    ob_end_flush();
+    ob_flush();
+    flush();
 }
 
 $from = new \XPBot\System\Xmpp\XmppClient(new \XPBot\System\Xmpp\Jid($settings['from']['name'], $settings['from']['server'], 'migration'), $settings['from']['password']);
@@ -50,18 +105,47 @@ $from->connect();
 $to = new \XPBot\System\Xmpp\XmppClient(new \XPBot\System\Xmpp\Jid($settings['to']['name'], $settings['to']['server'], 'migration'), $settings['from']['password']);
 $to->connect();
 
-$from->roster->onItem->add(function ($item) use ($settings, $from, $to) {
-    $to->roster->add($item->jid, $item->name, $item->groups);
+$from->onAuth->add(function ($result) {
+    if ($result->xml->getName() != 'success') {
+        info('danger', 'Nie udało się zalogować na konto, z którego migrujesz, na pewno podałeś poprawne dane logowania?');
+        exit;
+    }
+});
+
+$to->onAuth->add(function ($result) {
+    if ($result->xml->getName() != 'success') {
+        info('danger', 'Nie udało się zalogować na konto, na którego migrujesz, na pewno podałeś poprawne dane logowania?');
+        exit;
+    }
+});
+
+$from->roster->onItem->add(function ($item) use ($settings, $from, $to, $mid) {
+    if($settings['roster'])
+        $to->roster->add($item->jid, $item->name, $item->groups);
 
     if($settings['message'])
         $from->message($item->jid, str_replace(['%old', '%new'], [$from->jid->bare(), $to->jid->bare()], $settings['message']));
 
-    if($settings['status'])
-        $from->presence('unavailable', str_replace(['%old', '%new'], [$from->jid->bare(), $to->jid->bare()], $settings['status']));
+    if(file_exists('logs/'.$mid)) touch('logs/'.$mid);
 });
 
-$from->roster->onComplete->add(function ($roster) {
+$from->roster->onComplete->add(function ($roster) use ($mid, $from, $to, $settings) {
+    if($settings['roster'])
+        info('success', 'Przeniesiono wszystkie kontakty.');
+    if($settings['message'])
+        info('success', 'Rozesłano wiadomości.');
+    if($settings['status']) {
+        $from->presence('unavailable', str_replace(['%old', '%new'], [$from->jid->bare(), $to->jid->bare()], $settings['status']));
+        info('success', 'Ustawiono opis.');
+    }
+
+    info('success', 'Migracja zakończona.');
+
+    unset($from); unset($to);
+    sleep(10);
+    if(file_exists('logs/'.$mid)) unlink('logs/'.$mid);
     exit;
+
 });
 
 try {
@@ -72,5 +156,5 @@ try {
         usleep(100);
     }
 } catch (Exception $e) {
-    echo $e->getMessage();
+    info('danger', $e->getMessage());
 }

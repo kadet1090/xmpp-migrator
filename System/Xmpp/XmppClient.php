@@ -249,8 +249,8 @@ class XmppClient extends XmppSocket
         if ($result->xml->getName() == 'success') {
             $this->startStream();
             $this->_bind();
-        } else
-            throw new \RuntimeException('Authorization failed.');
+        }// else
+            //throw new \RuntimeException('Authorization failed.', 1);
     }
 
     /**
@@ -286,7 +286,7 @@ class XmppClient extends XmppSocket
             stream_set_blocking($this->_socket, false);
             $this->startStream();
         } else
-            throw new \RuntimeException('Tls negotiation failed.');
+            throw new \RuntimeException('Tls negotiation failed.', 2);
     }
 
     /**
@@ -328,7 +328,7 @@ class XmppClient extends XmppSocket
             $this->isReady = true;
             $this->onReady->run();
         } else
-            throw new \RuntimeException('Resource binding error.');
+            throw new \RuntimeException('Resource binding error.', 3);
     }
 
     /**

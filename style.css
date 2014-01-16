@@ -1,0 +1,41 @@
+body {
+    padding-top: 70px;
+}
+
+.container {
+    text-align: center;
+}
+
+input {
+    z-index: 1;
+}
+
+#xmpp-from input.first {
+    border-top-right-radius: 5px !important;
+    margin-bottom: -1px !important;
+}
+
+#xmpp-from input.last {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 5px !important;
+}
+
+#xmpp-to input.first {
+    border-top-left-radius: 5px !important;
+    border-bottom-left-radius: 0 !important;
+
+    margin-bottom: -1px !important;
+}
+
+#xmpp-to input.last {
+    border-bottom-left-radius: 5px !important;
+}
+
+input.first:focus {
+    z-index: 2 !important;
+}
+
+.settings {
+    margin-top: 30px;
+    text-align: left;
+}
