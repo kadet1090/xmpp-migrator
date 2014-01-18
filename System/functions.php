@@ -1,4 +1,13 @@
 <?php
+function SimpleXMLElement_innerXML($xml)
+{
+    $innerXML= '';
+    foreach (dom_import_simplexml($xml)->childNodes as $child)
+    {
+        $innerXML .= $child->ownerDocument->saveXML( $child );
+    }
+    return $innerXML;
+};
 
 /**
  * Performs deep search in array.

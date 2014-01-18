@@ -58,7 +58,12 @@ USAGE;
     if(in_array('-nr', $argv))
         $settings['roster'] = false;
     else
-        $settings['status'] = true;
+        $settings['roster'] = true;
+
+    if(in_array('-nv', $argv))
+        $settings['vcard'] = false;
+    else
+        $settings['vcard'] = true;
 } else {
     if(!preg_match('/([^@\/\"\'\s\&\:><]+)\@([a-z_\-\.]*[a-z]{2,3}):(.*)/', $_POST['from'], $matches)) info('danger', 'Podaj poprawne jid, z którego chcesz migrować.');
     $settings['from'] = ['name' => $matches[1], 'server' => $matches[2], 'password' => $matches[3]];
@@ -81,6 +86,11 @@ USAGE;
     else
         $settings['roster'] = true;
 
+    if(!empty($_POST['vcard']))
+        $settings['vcard'] = $_POST['vcard'] == 'no' ? false : true;
+    else
+        $settings['vcard'] = true;
+
     $mid = md5($_POST['from'].':'.$_POST['to'].':'.time());
     touch('logs/'.$mid);
     echo $mid;
@@ -98,6 +108,8 @@ USAGE;
     ob_flush();
     flush();
 }
+
+$done = false;
 
 $from = new \XPBot\System\Xmpp\XmppClient(new \XPBot\System\Xmpp\Jid($settings['from']['name'], $settings['from']['server'], 'migration'), $settings['from']['password']);
 $from->connect();
@@ -129,7 +141,7 @@ $from->roster->onItem->add(function ($item) use ($settings, $from, $to, $mid) {
     if(file_exists('logs/'.$mid)) touch('logs/'.$mid);
 });
 
-$from->roster->onComplete->add(function ($roster) use ($mid, $from, $to, $settings) {
+$from->roster->onComplete->add(function ($roster) use ($mid, $from, $to, $settings, &$done) {
     if($settings['roster'])
         info('success', 'Przeniesiono wszystkie kontakty.');
     if($settings['message'])
@@ -139,22 +151,43 @@ $from->roster->onComplete->add(function ($roster) use ($mid, $from, $to, $settin
         info('success', 'Ustawiono opis.');
     }
 
-    info('success', 'Migracja zakończona.');
+    if(!$settings['vcard']) $done = true;
+    else {
+        $xml = new \XPBot\System\Utils\XmlBranch('iq');
+        $id = uniqid('vcard_');
+        $xml->addAttribute('id', $id);
+        $xml->addAttribute('type', 'get');
+        $xml->addChild(new \XPBot\System\Utils\XmlBranch('vCard'))->addAttribute('xmlns', 'vcard-temp');
 
-    unset($from); unset($to);
-    sleep(10);
-    if(file_exists('logs/'.$mid)) unlink('logs/'.$mid);
-    exit;
+        $from->write($xml);
+        $from->wait('iq', $id, function ($stanza) use($to, &$done) {
+            if($stanza['type'] == 'result') {
+                $xml = new \XPBot\System\Utils\XmlBranch('iq');
+                $xml->addAttribute('type', 'set');
+                $xml->addChild(new \XPBot\System\Utils\XmlBranch('vCard'))->addAttribute('xmlns', 'vcard-temp');
+                $xml->vCard[0]->setContent(SimpleXMLElement_innerXML($stanza->vCard), false);
+                $to->write($xml);
+                info('success', 'Przeniesiono vCard.');
+            } else {
+                info('warning', 'Nie udało się pobrać vCard');
+            }
+            $done = true;
+        });
+    }
 
 });
 
 try {
-    while(true) {
+    while(!$done) {
         $from->process();
         $to->process();
-
         usleep(100);
     }
 } catch (Exception $e) {
     info('danger', $e->getMessage());
 }
+
+unset($from); unset($to);
+sleep(10);
+//if(file_exists('logs/'.$mid)) unlink('logs/'.$mid);
+info('success', 'Migracja zakończona.');

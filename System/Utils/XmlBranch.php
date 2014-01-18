@@ -68,9 +68,9 @@ class XmlBranch
      *
      * @param string $content New branch content.
      */
-    public function setContent($content)
+    public function setContent($content, $escape = true)
     {
-        $this->content = htmlspecialchars(trim($content));
+        $this->content = $escape ? htmlspecialchars(trim($content)) : trim($content);
     }
 
     /**
