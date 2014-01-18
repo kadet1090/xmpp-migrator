@@ -14,8 +14,26 @@ body {
     padding: 0 0 100px;
 }
 
-.container {
+.container.migrate {
     text-align: center;
+}
+
+dl {
+    counter-reset: dl;
+}
+
+dl dt:before {
+    counter-increment: dl;
+    content: counter(dl) ". ";
+}
+
+dl dt {
+    font-size: 22pt;
+    margin-top: 20px;
+}
+
+dl dt:first-child {
+    margin-top: 0;
 }
 
 input {
@@ -55,4 +73,14 @@ input.first:focus {
 footer {
     margin-top: 40px;
     height: 60px;
+    line-height: 60px;
+    background: #eee;
+}
+
+form .row {
+    margin-top: 10px;
+}
+
+textarea{
+    resize: vertical;
 }

@@ -1,3 +1,5 @@
+<?php ini_set('display_errors', 'Off'); ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,17 +39,22 @@
             </div>
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href="index.php">Migracja</a></li>
-                    <li><a href="faq.php">FAQ</a></li>
-                    <li><a href="contact.php">Kontakt</a></li>
+                    <li <?php if(!isset($_GET['q']) || !file_exists($_GET['q'].'.php')): ?>class="active"<?php endif; ?>><a href="index.php">Migracja</a></li>
+                    <li <?php if(isset($_GET['q']) && $_GET['q'] == 'faq'): ?>class="active"<?php endif; ?>><a href="index.php?q=faq">FAQ</a></li>
+                    <li <?php if(isset($_GET['q']) && $_GET['q'] == 'contact'): ?>class="active"<?php endif; ?>><a href="index.php?q=contact">Kontakt</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="https://github.com/kadet1090/xmpp-migrator">GitHub</a></li>
                 </ul>
             </div><!--/.nav-collapse -->
         </div>
     </div>
-
-    <div class="container">
+    <?php if(isset($_GET['q']) && file_exists($_GET['q'].'.php')): ?>
+        <?php include $_GET['q'].'.php'; ?>
+    <?php else: ?>
+    <div class="container migrate">
         <div class="row">
-            <div class="alert alert-info">Boisz się o swoje konto? Boisz się, że Twoje hasło powędruje gdzieś w świat? Projekt jest otwarty, i każdy kto chce może zobaczyć jego źródło, a także wnieść coś od siebie. Jeżeli to Cię nadal nie przekonuje, zmień hasło swojego konta na czas migracji.</div>
+            <div class="alert alert-info">Boisz się o swoje konto? Boisz się, że Twoje hasło powędruje gdzieś w świat? Projekt jest <a href="https://github.com/kadet1090/xmpp-migrator" class="alert-link">otwarty</a>, i każdy kto chce może zobaczyć jego źródło, a także wnieść coś od siebie. Jeżeli to Cię nadal nie przekonuje, zmień hasło swojego konta na czas migracji.</div>
         </div>
         <h1>Przemigruj swoje konto XMPP/Jabber!</h1>
         <div class="row">
@@ -112,6 +119,7 @@
             </div>
         </div>
     </div><!-- /.container -->
+    <?php endif; ?>
 </div>
 <footer>
     <div class="container">

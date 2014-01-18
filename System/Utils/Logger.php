@@ -27,7 +27,7 @@ class Logger
         if (DEBUG_MODE >= 1)
             echo "\033[1;30m[" . date('H:i:s') . " ?] \033[0m" . $message . PHP_EOL;
 
-        self::_addToLog('Debug.log', $message);
+        //self::_addToLog('Debug.log', $message); // turned off debugging
     }
 
     /**
